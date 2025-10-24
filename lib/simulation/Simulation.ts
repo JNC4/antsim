@@ -30,7 +30,7 @@ export class Simulation {
   pheromones: PheromoneGrid;
   foodSources: FoodSource[];
   obstacles: Obstacle[];
-  colony: Colony;
+  colonies: Colony[];
   spatialHash: SpatialHash;
 
   private width: number;
@@ -47,14 +47,20 @@ export class Simulation {
     this.height = height;
     this.config = { ...config };
 
-    this.colony = {
-      position: { x: width / 2, y: height / 2 },
-      radius: 30,
-      foodCollected: 0
-    };
+    this.colonies = [
+      {
+        id: 'colony1',
+        position: { x: width / 4, y: height / 2 },
+        radius: 30,
+        foodCollected: 0,
+        color: '#8B4513',
+        name: 'Brown Colony'
+      }
+    ];
 
     this.ants = [];
     this.pheromones = new PheromoneGrid(width, height, 5);
+    this.pheromones.addColony('colony1');
     this.foodSources = [];
     this.obstacles = [];
     this.spatialHash = new SpatialHash(50);
@@ -64,6 +70,11 @@ export class Simulation {
     this.tripTimes = [];
 
     this.initializeAnts();
+  }
+
+  // Backward compatibility
+  get colony(): Colony {
+    return this.colonies[0];
   }
 
   private initializeAnts(): void {
@@ -81,7 +92,47 @@ export class Simulation {
 
       const offset = physics.randomInCircle(this.colony.radius);
       const position = physics.add(this.colony.position, offset);
-      this.ants.push(new Ant(position, type));
+      this.ants.push(new Ant(position, 'colony1', type));
+    }
+
+    // Add rival colony ants if enabled
+    if (this.config.enableRivalColony) {
+      // Add rival colony if it doesn't exist
+      if (this.colonies.length < 2) {
+        const rivalColony: Colony = {
+          id: 'colony2',
+          position: { x: this.width * 0.75, y: this.height / 2 },
+          radius: 30,
+          foodCollected: 0,
+          color: '#DC143C',
+          name: 'Red Colony'
+        };
+        this.colonies.push(rivalColony);
+        this.pheromones.addColony('colony2');
+      }
+
+      const rivalCount = this.config.rivalAntCount || this.config.antCount;
+      const rivalColony = this.colonies[1];
+
+      for (let i = 0; i < rivalCount; i++) {
+        let type = AntType.WORKER;
+
+        if (enableScouts && Math.random() < 0.1) {
+          type = AntType.SCOUT;
+        } else if (enableSoldiers && Math.random() < 0.1) {
+          type = AntType.SOLDIER;
+        }
+
+        const offset = physics.randomInCircle(rivalColony.radius);
+        const position = physics.add(rivalColony.position, offset);
+        this.ants.push(new Ant(position, 'colony2', type));
+      }
+    } else {
+      // Remove rival colony if disabled
+      if (this.colonies.length > 1) {
+        this.colonies = [this.colonies[0]];
+        this.pheromones.removeColony('colony2');
+      }
     }
   }
 
@@ -142,20 +193,24 @@ export class Simulation {
     // Update each ant
     for (const ant of this.ants) {
       const nearbyAnts = this.spatialHash.getNearby(ant.position, 20);
+
+      // Find ant's colony
+      const antColony = this.colonies.find(c => c.id === ant.colonyId) || this.colonies[0];
+
       ant.update(
         this.config,
         this.pheromones,
         this.foodSources,
         this.obstacles,
-        this.colony.position,
+        antColony.position,
         nearbyAnts,
         this.width,
         this.height
       );
 
-      // Check if ant reached colony with food
-      if (ant.hasFood && physics.distance(ant.position, this.colony.position) < this.colony.radius) {
-        this.colony.foodCollected += ant.foodCarried;
+      // Check if ant reached its colony with food
+      if (ant.hasFood && physics.distance(ant.position, antColony.position) < antColony.radius) {
+        antColony.foodCollected += ant.foodCarried;
         ant.hasFood = false;
         ant.foodCarried = 0;
       }
@@ -193,9 +248,10 @@ export class Simulation {
     const activeForagers = this.ants.filter(ant => !ant.hasFood).length;
     const returningAnts = this.ants.filter(ant => ant.hasFood).length;
 
-    // Calculate efficiency (food per ant per minute)
+    // Calculate efficiency (food per ant per minute) - combined for all colonies
+    const totalFoodCollected = this.colonies.reduce((sum, c) => sum + c.foodCollected, 0);
     const elapsedMinutes = (Date.now() - this.startTime) / 60000;
-    const efficiency = elapsedMinutes > 0 ? this.colony.foodCollected / (this.ants.length * elapsedMinutes) : 0;
+    const efficiency = elapsedMinutes > 0 ? totalFoodCollected / (this.ants.length * elapsedMinutes) : 0;
 
     // Estimate active pheromone trails
     let activePheromoneTrails = 0;
@@ -218,7 +274,7 @@ export class Simulation {
     return {
       totalAnts: this.ants.length,
       activeForagers,
-      foodCollected: Math.round(this.colony.foodCollected),
+      foodCollected: Math.round(totalFoodCollected),
       activePheromoneTrails,
       efficiency: Math.round(efficiency * 100) / 100,
       explorationCoverage: Math.round(explorationCoverage),

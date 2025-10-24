@@ -41,8 +41,10 @@ export default function SimulationCanvas({
     // Render obstacles
     renderObstacles(ctx, simulation.obstacles);
 
-    // Render colony
-    renderColony(ctx, simulation.colony.position, simulation.colony.radius, config.nightMode);
+    // Render all colonies
+    for (const colony of simulation.colonies) {
+      renderColony(ctx, colony, config.nightMode);
+    }
 
     // Render food sources
     renderFoodSources(ctx, simulation.foodSources);
@@ -156,15 +158,18 @@ function renderPheromones(ctx: CanvasRenderingContext2D, simulation: Simulation,
   }
 }
 
-function renderColony(ctx: CanvasRenderingContext2D, position: { x: number; y: number }, radius: number, nightMode: boolean) {
+function renderColony(ctx: CanvasRenderingContext2D, colony: any, nightMode: boolean) {
+  const { position, radius, color, name } = colony;
+
   // Outer circle
-  ctx.fillStyle = nightMode ? '#3D2817' : '#8B4513';
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(position.x, position.y, radius, 0, Math.PI * 2);
   ctx.fill();
 
-  // Inner entrance
-  ctx.fillStyle = nightMode ? '#1A0F08' : '#5C2E0F';
+  // Inner entrance (darker)
+  const darkerColor = adjustColor(color, -40);
+  ctx.fillStyle = darkerColor;
   ctx.beginPath();
   ctx.arc(position.x, position.y, radius * 0.6, 0, Math.PI * 2);
   ctx.fill();
@@ -174,6 +179,20 @@ function renderColony(ctx: CanvasRenderingContext2D, position: { x: number; y: n
   ctx.beginPath();
   ctx.arc(position.x - radius * 0.3, position.y - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
   ctx.fill();
+
+  // Colony label
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.font = 'bold 10px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(name, position.x, position.y - radius - 5);
+}
+
+function adjustColor(color: string, amount: number): string {
+  const num = parseInt(color.replace('#', ''), 16);
+  const r = Math.max(0, Math.min(255, (num >> 16) + amount));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount));
+  const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
 function renderFoodSources(ctx: CanvasRenderingContext2D, foodSources: FoodSource[]) {
@@ -217,22 +236,27 @@ function renderFoodSources(ctx: CanvasRenderingContext2D, foodSources: FoodSourc
 
 function renderAnts(ctx: CanvasRenderingContext2D, ants: Ant[], config: SimulationConfig) {
   for (const ant of ants) {
+    // Get base color from colony
+    const baseColor = ant.colonyId === 'colony2' ? '#DC143C' : '#8B4513';
+
     // Ant body color based on type
     let color: string;
     let size: number;
 
     switch (ant.type) {
       case AntType.SCOUT:
-        color = '#A0522D';
+        // Lighter version of colony color
+        color = ant.colonyId === 'colony2' ? '#FF6B6B' : '#A0522D';
         size = 3;
         break;
       case AntType.SOLDIER:
-        color = '#000000';
+        // Darker version of colony color
+        color = ant.colonyId === 'colony2' ? '#8B0000' : '#000000';
         size = 5;
         break;
       case AntType.WORKER:
       default:
-        color = '#8B4513';
+        color = baseColor;
         size = 4;
         break;
     }

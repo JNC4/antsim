@@ -152,6 +152,25 @@ export default function ControlPanel({ config, onConfigChange }: ControlPanelPro
           onChange={(v) => onConfigChange({ nightMode: v })}
         />
       </Section>
+
+      {/* Rival Colony Settings */}
+      <Section title="🐜 Rival Colony">
+        <Toggle
+          label="Enable Rival Colony"
+          checked={config.enableRivalColony}
+          onChange={(v) => onConfigChange({ enableRivalColony: v })}
+        />
+        {config.enableRivalColony && (
+          <Slider
+            label="Rival Ant Count"
+            value={config.rivalAntCount}
+            min={10}
+            max={500}
+            step={10}
+            onChange={(v) => onConfigChange({ rivalAntCount: v })}
+          />
+        )}
+      </Section>
     </div>
   );
 }

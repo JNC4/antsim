@@ -53,6 +53,10 @@ export interface SimulationConfig {
   enableScouts: boolean;
   enableSoldiers: boolean;
   enableObstacles: boolean;
+
+  // Multi-colony settings
+  enableRivalColony: boolean;
+  rivalAntCount: number;
 }
 
 export interface FoodSource {
@@ -72,9 +76,12 @@ export interface Obstacle {
 }
 
 export interface Colony {
+  id: string;
   position: Vector2D;
   radius: number;
   foodCollected: number;
+  color: string;
+  name: string;
 }
 
 export const DEFAULT_CONFIG: SimulationConfig = {
@@ -95,5 +102,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   nightMode: false,
   enableScouts: true,
   enableSoldiers: true,
-  enableObstacles: false
+  enableObstacles: false,
+  enableRivalColony: false,
+  rivalAntCount: 100
 };

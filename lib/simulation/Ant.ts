@@ -14,13 +14,14 @@ export class Ant {
   targetFood: FoodSource | null;
   path: Vector2D[];
   angle: number;
+  colonyId: string;
 
   // Behavior parameters
   private wanderAngle: number;
   private stuckCounter: number;
   private lastPosition: Vector2D;
 
-  constructor(position: Vector2D, type: AntType = AntType.WORKER) {
+  constructor(position: Vector2D, colonyId: string, type: AntType = AntType.WORKER) {
     this.id = Math.random().toString(36).substr(2, 9);
     this.position = { ...position };
     this.velocity = { x: 0, y: 0 };
@@ -31,6 +32,7 @@ export class Ant {
     this.targetFood = null;
     this.path = [];
     this.angle = physics.randomAngle();
+    this.colonyId = colonyId;
     this.wanderAngle = 0;
     this.stuckCounter = 0;
     this.lastPosition = { ...position };
@@ -169,7 +171,7 @@ export class Ant {
     }
 
     // Check for food pheromone trails
-    const foodPheromone = pheromones.get(this.position, PheromoneType.FOOD);
+    const foodPheromone = pheromones.get(this.position, PheromoneType.FOOD, this.colonyId);
     if (foodPheromone > 5 && Math.random() < config.trailFollowingStrength) {
       // Switch to following trail
       this.state = AntState.FOLLOWING_TRAIL;
@@ -199,8 +201,8 @@ export class Ant {
     }
 
     // Deposit weak home pheromone
-    pheromones.deposit(this.position, PheromoneType.HOME, config.pheromoneStrength * 0.3);
-    pheromones.deposit(this.position, PheromoneType.EXPLORE, config.pheromoneStrength * 0.5);
+    pheromones.deposit(this.position, PheromoneType.HOME, config.pheromoneStrength * 0.3, this.colonyId);
+    pheromones.deposit(this.position, PheromoneType.EXPLORE, config.pheromoneStrength * 0.5, this.colonyId);
   }
 
   private returnBehavior(
@@ -229,7 +231,7 @@ export class Ant {
       config.pheromoneStrength * 0.5 :
       config.pheromoneStrength;
 
-    pheromones.deposit(this.position, PheromoneType.FOOD, pheromoneStrength);
+    pheromones.deposit(this.position, PheromoneType.FOOD, pheromoneStrength, this.colonyId);
   }
 
   private followTrailBehavior(
@@ -251,7 +253,8 @@ export class Ant {
     const gradient = pheromones.getGradient(
       this.position,
       PheromoneType.FOOD,
-      sensorRange * 0.5
+      sensorRange * 0.5,
+      this.colonyId
     );
 
     const gradientStrength = physics.magnitude(gradient);
@@ -261,7 +264,7 @@ export class Ant {
       this.velocity = physics.multiply(gradient, this.getSpeed(config));
 
       // Reinforce trail
-      pheromones.deposit(this.position, PheromoneType.FOOD, config.pheromoneStrength * 0.3);
+      pheromones.deposit(this.position, PheromoneType.FOOD, config.pheromoneStrength * 0.3, this.colonyId);
     } else {
       // Lost the trail, resume searching
       this.state = AntState.SEARCHING;
