@@ -5,7 +5,15 @@
       "Bash(npm install)",
       "Bash(npm run build:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(npx vercel --version)",
+      "Bash(npx vercel --prod --yes)",
+      "Bash(npx vercel:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

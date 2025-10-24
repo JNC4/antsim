@@ -1,5 +1,5 @@
 import { Ant } from './Ant';
-import { PheromoneGrid } from './Pheromone';
+import { PheromoneGrid, PheromoneType } from './Pheromone';
 import { createFoodSource, isDepleted } from './Food';
 import { SpatialHash } from './physics';
 import {
@@ -177,6 +177,19 @@ export class Simulation {
   }
 
   getStats(): SimulationStats {
+    // Safety check
+    if (!this.ants || this.ants.length === 0) {
+      return {
+        totalAnts: 0,
+        activeForagers: 0,
+        foodCollected: 0,
+        activePheromoneTrails: 0,
+        efficiency: 0,
+        explorationCoverage: 0,
+        averageTripTime: 0
+      };
+    }
+
     const activeForagers = this.ants.filter(ant => !ant.hasFood).length;
     const returningAnts = this.ants.filter(ant => ant.hasFood).length;
 
@@ -186,9 +199,14 @@ export class Simulation {
 
     // Estimate active pheromone trails
     let activePheromoneTrails = 0;
-    const foodGrid = this.pheromones.getGridData(1 as any); // FOOD type
-    for (let i = 0; i < foodGrid.data.length; i++) {
-      if (foodGrid.data[i] > 10) activePheromoneTrails++;
+    try {
+      const foodGrid = this.pheromones.getGridData(PheromoneType.FOOD);
+      for (let i = 0; i < foodGrid.data.length; i++) {
+        if (foodGrid.data[i] > 10) activePheromoneTrails++;
+      }
+    } catch (e) {
+      // Fallback if grid not ready
+      activePheromoneTrails = 0;
     }
 
     // Exploration coverage (simplified)

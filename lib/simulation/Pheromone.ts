@@ -176,6 +176,9 @@ export class PheromoneGrid {
       case PheromoneType.EXPLORE:
         data = this.exploreGrid;
         break;
+      default:
+        data = this.foodGrid;
+        break;
     }
     return {
       data,
